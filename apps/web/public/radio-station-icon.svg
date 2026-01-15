@@ -1,0 +1,14 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Radio waves -->
+  <g stroke="#00ff88" stroke-width="2" fill="none" opacity="0.8">
+    <circle cx="16" cy="16" r="12"/>
+    <circle cx="16" cy="16" r="8"/>
+    <circle cx="16" cy="16" r="4"/>
+  </g>
+  
+  <!-- Central dot -->
+  <circle cx="16" cy="16" r="2" fill="#00ff88"/>
+  
+  <!-- Station indicator -->
+  <circle cx="16" cy="16" r="1" fill="#ffffff"/>
+</svg>

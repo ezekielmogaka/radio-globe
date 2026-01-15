@@ -1,0 +1,27 @@
+{
+  "name": "Radio Globe Next - Discover World Radio",
+  "short_name": "Radio Globe",
+  "description": "Explore the world's radio stations through an interactive 3D globe",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "display": "standalone",
+  "orientation": "any",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["music", "entertainment", "utilities"],
+  "lang": "en-US"
+}

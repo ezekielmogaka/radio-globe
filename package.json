@@ -1,0 +1,39 @@
+{
+  "name": "radio-globe-next",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Enhanced Radio Garden alternative with AI-powered discovery",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "type-check": "turbo run type-check",
+    "format": "prettier --write .",
+    "setup": "npm install && npm run setup:db",
+    "setup:db": "cd services/api && npm run db:migrate && npm run db:seed"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "prettier": "^3.0.0",
+    "turbo": "^1.10.0",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "cesium": "^1.137.0",
+    "three": "^0.182.0"
+  }
+}

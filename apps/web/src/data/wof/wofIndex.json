@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-01-14T11:50:36.718Z",
+  "sources": {
+    "countries": "unavailable",
+    "regions": "unavailable"
+  },
+  "countries": {
+    "KE": {
+      "id": 85632215,
+      "name": "Kenya",
+      "isoAlpha2": "KE",
+      "isoAlpha3": "KEN",
+      "centroid": {
+        "lat": 0.4253,
+        "lng": 37.8626
+      },
+      "bbox": {
+        "minLat": -4.678047,
+        "minLng": 33.908085,
+        "maxLat": 5.506,
+        "maxLng": 41.906895
+      },
+      "population": 47564296
+    },
+    "US": {
+      "id": 85633793,
+      "name": "United States",
+      "isoAlpha2": "US",
+      "isoAlpha3": "USA",
+      "centroid": {
+        "lat": 39.833333,
+        "lng": -98.585522
+      },
+      "bbox": {
+        "minLat": 18.7763,
+        "minLng": -171.791111,
+        "maxLat": 71.357764,
+        "maxLng": -66.96466
+      },
+      "population": 331002651
+    }
+  },
+  "regions": {
+    "KE": [
+      {
+        "id": 1108730523,
+        "name": "Nairobi",
+        "countryIso": "KE",
+        "centroid": {
+          "lat": -1.28333,
+          "lng": 36.816667
+        },
+        "bbox": {
+          "minLat": -1.42263,
+          "minLng": 36.662109,
+          "maxLat": -1.155822,
+          "maxLng": 36.951904
+        },
+        "population": 4397073
+      }
+    ],
+    "US": [
+      {
+        "id": 85688651,
+        "name": "California",
+        "countryIso": "US",
+        "centroid": {
+          "lat": 37.271875,
+          "lng": -119.270416
+        },
+        "bbox": {
+          "minLat": 32.528832,
+          "minLng": -124.482003,
+          "maxLat": 42.009517,
+          "maxLng": -114.131211
+        },
+        "population": 39538223
+      }
+    ]
+  }
+}

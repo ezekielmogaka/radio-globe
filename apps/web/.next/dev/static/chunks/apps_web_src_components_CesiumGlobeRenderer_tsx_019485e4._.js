@@ -1,0 +1,31 @@
+(globalThis.TURBOPACK_CHUNK_LISTS || (globalThis.TURBOPACK_CHUNK_LISTS = [])).push({
+    script: typeof document === "object" ? document.currentScript : undefined,
+    chunks: [
+  "static/chunks/node_modules_@cesium_engine_Source_Core_Matrix4_c34cc319.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Core_GeometryPipeline_b6f7ddb7.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Core_420e0146._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_DataSources_9b39df34._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Renderer_2de1a290._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Shaders_f361b51b._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Primitive_a847cd3b.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_GltfPipeline_57640cba._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Model_Model_4437d6ee.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Model_41d78a23._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_GltfLoader_2d1b04e5.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Expression_edabfdbb.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Cesium3DTile_f27e63a1.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Cesium3DTileset_d3f32877.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_GlobeSurfaceTileProvider_cb433231.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Camera_3234deee.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_ScreenSpaceCameraController_f6262adb.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Scene_984bafd1.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_bb3ffb01._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Widget_CesiumWidget_e86f3e72.js",
+  "static/chunks/00337_meshoptimizer_60027eb5._.js",
+  "static/chunks/node_modules_@spz-loader_core_dist_index_52975555.js",
+  "static/chunks/node_modules_@cesium_widgets_Source_d2c62022._.js",
+  "static/chunks/_cf32f47c._.js",
+  "static/chunks/apps_web_src_7c8f2f88._.js"
+],
+    source: "dynamic"
+});

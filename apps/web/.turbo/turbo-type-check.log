@@ -1,0 +1,41 @@
+
+> @radio-globe/web@0.1.0 type-check
+> tsc --noEmit
+
+[96msrc/app/providers.tsx[0m:[93m11[0m:[93m10[0m - [91merror[0m[90m TS2339: [0mProperty 'createClient' does not exist on type '"The property 'useContext' in your router collides with a built-in method, rename this router or procedure on your backend." | "The property 'useUtils' in your router collides with a built-in method, rename this router or procedure on your backend." | "The property 'Provider' in your router collides with a built-in ...'.
+  Property 'createClient' does not exist on type '"The property 'useContext' in your router collides with a built-in method, rename this router or procedure on your backend."'.
+
+[7m11[0m     trpc.createClient({
+[7m  [0m [91m         ~~~~~~~~~~~~[0m
+
+[96msrc/app/providers.tsx[0m:[93m21[0m:[93m11[0m - [91merror[0m[90m TS2339: [0mProperty 'Provider' does not exist on type '"The property 'useContext' in your router collides with a built-in method, rename this router or procedure on your backend." | "The property 'useUtils' in your router collides with a built-in method, rename this router or procedure on your backend." | "The property 'Provider' in your router collides with a built-in ...'.
+  Property 'Provider' does not exist on type '"The property 'useContext' in your router collides with a built-in method, rename this router or procedure on your backend."'.
+
+[7m21[0m     <trpc.Provider client={trpcClient} queryClient={queryClient}>
+[7m  [0m [91m          ~~~~~~~~[0m
+
+[96msrc/app/providers.tsx[0m:[93m23[0m:[93m12[0m - [91merror[0m[90m TS2339: [0mProperty 'Provider' does not exist on type '"The property 'useContext' in your router collides with a built-in method, rename this router or procedure on your backend." | "The property 'useUtils' in your router collides with a built-in method, rename this router or procedure on your backend." | "The property 'Provider' in your router collides with a built-in ...'.
+  Property 'Provider' does not exist on type '"The property 'useContext' in your router collides with a built-in method, rename this router or procedure on your backend."'.
+
+[7m23[0m     </trpc.Provider>
+[7m  [0m [91m           ~~~~~~~~[0m
+
+[96msrc/lib/trpc.ts[0m:[93m2[0m:[93m32[0m - [91merror[0m[90m TS2307: [0mCannot find module '../../../services/api/src/trpc/router' or its corresponding type declarations.
+
+[7m2[0m import type { AppRouter } from "../../../services/api/src/trpc/router";
+[7m [0m [91m                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+Found 4 errors in 2 files.
+
+Errors  Files
+     3  src/app/providers.tsx[90m:11[0m
+     1  src/lib/trpc.ts[90m:2[0m
+⠙[1G[0K[1mnpm[22m [31merror[39m Lifecycle script `type-check` failed with error:
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mcode[39m [33m2[39m
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mpath[39m /Users/ezekiel.mogaka/Desktop/Code/radio-globe-next/apps/web
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mworkspace[39m @radio-globe/web@0.1.0
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mlocation[39m /Users/ezekiel.mogaka/Desktop/Code/radio-globe-next/apps/web
+⠙[1G[0K[1mnpm[22m [31merror[39m command failed
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mcommand[39m sh -c tsc --noEmit
+⠙[1G[0K
