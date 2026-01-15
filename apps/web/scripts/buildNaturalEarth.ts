@@ -2,12 +2,24 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import bbox from "@turf/bbox";
-const globalScope = globalThis as typeof globalThis & { self?: typeof globalThis; window?: typeof globalThis };
+const globalScope = globalThis as unknown as {
+  self?: typeof globalThis;
+  window?: typeof globalThis;
+  navigator?: { userAgent?: string } & Record<string, unknown>;
+};
+
 if (typeof globalScope.self === "undefined") {
-  globalScope.self = globalScope;
+  globalScope.self = globalThis;
 }
+
 if (typeof globalScope.window === "undefined") {
-  globalScope.window = globalScope;
+  globalScope.window = globalThis;
+}
+
+if (typeof globalScope.navigator === "undefined") {
+  globalScope.navigator = { userAgent: "node" };
+} else if (!globalScope.navigator.userAgent) {
+  globalScope.navigator.userAgent = "node";
 }
 
 let shpModulePromise: Promise<typeof import("shpjs")> | null = null;

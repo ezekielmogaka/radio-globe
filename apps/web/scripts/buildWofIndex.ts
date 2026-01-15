@@ -28,7 +28,7 @@ interface CountryEntry {
 interface RegionEntry {
   id: number;
   name: string;
-  countryIso: string | null;
+  countryIso: string;
   centroid: { lat: number; lng: number } | null;
   bbox: BoundingBox | null;
   population: number | null;
@@ -48,7 +48,7 @@ const COUNTRY_META_URL = "https://data.whosonfirst.org/meta/wof-country-latest.c
 const REGION_META_URL = "https://data.whosonfirst.org/meta/wof-region-latest.csv";
 const OUTPUT_DIR = resolve(process.cwd(), "src/data/wof");
 
-function toNumber(value: string | undefined): number | null {
+function toNumber(value: string | null | undefined): number | null {
   if (!value) return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
