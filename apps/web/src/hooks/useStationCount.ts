@@ -26,6 +26,14 @@ export function useStationCount() {
     
     // Subscribe to station loading events
     eventBus.subscribe(observer, [GlobeEventType.STATIONS_LOADED]);
+
+    // Check if stations were already loaded before subscription
+    if (eventBus.getLatestEvent) {
+      const lastEvent = eventBus.getLatestEvent(GlobeEventType.STATIONS_LOADED);
+      if (lastEvent) {
+        setStationCount(lastEvent.data?.count || 0);
+      }
+    }
     
     return () => {
       eventBus.unsubscribe(observerId);

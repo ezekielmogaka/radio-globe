@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Play,
@@ -11,6 +11,9 @@ import {
   SkipBack,
   SkipForward,
   Settings,
+  Heart,
+  Clock,
+  MapPin,
 } from "lucide-react";
 import { useGlobeStore } from "../stores/globe-store";
 import { useModularAudio } from "../hooks/useModularAudio";
@@ -18,7 +21,6 @@ import {
   ModularAudioVisualizer,
   useVisualizationType,
 } from "./ModularAudioVisualizer";
-import { useState } from "react";
 
 interface ModularAudioPlayerProps {
   className?: string;
@@ -33,11 +35,22 @@ export function ModularAudioPlayer({
   compactMode = false,
   autoPlay = false,
 }: ModularAudioPlayerProps) {
-  const selectedStation = useGlobeStore((state) => state.selectedStation);
+  const {
+    selectedStation,
+    playlist,
+    playlistIndex,
+    currentRegion,
+    nextStation,
+    previousStation,
+  } = useGlobeStore();
   const [showSettings, setShowSettings] = useState(false);
   const [audioState, audioActions] = useModularAudio({ autoPlay, volume: 0.7 });
   const { currentType, availableTypes, nextType, setType } =
     useVisualizationType();
+
+  // Enhanced features state
+  const [localTime, setLocalTime] = useState<string>("");
+  const [stationLocalTime, setStationLocalTime] = useState<string>("");
 
   // Load station when selected
   useEffect(() => {
@@ -45,6 +58,37 @@ export function ModularAudioPlayer({
       audioActions.loadStation(selectedStation);
     }
   }, [selectedStation, audioActions.loadStation]);
+
+  // Local time updates
+  useEffect(() => {
+    const updateTimes = () => {
+      const now = new Date();
+      setLocalTime(now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }));
+      
+      if (selectedStation) {
+        // Calculate estimated local time based on longitude (15 degrees = 1 hour)
+        // This is an approximation of solar time, which is robust offline solution
+        const lng = selectedStation.location.lng;
+        const offsetHours = lng / 15;
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const stationTime = new Date(utc + (3600000 * offsetHours));
+        
+        setStationLocalTime(stationTime.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }));
+      }
+    };
+    
+    updateTimes();
+    const interval = setInterval(updateTimes, 60000);
+    return () => clearInterval(interval);
+  }, [selectedStation]);
 
   const formatTime = (time: number): string => {
     const minutes = Math.floor(time / 60);
@@ -66,6 +110,10 @@ export function ModularAudioPlayer({
         <p className="text-gray-400 text-xs">
           Click on any station marker on the globe
         </p>
+        <div className="mt-3 flex items-center justify-center space-x-1 text-white/60">
+          <Clock className="w-4 h-4" />
+          <span className="text-sm">Local time: {localTime}</span>
+        </div>
       </motion.div>
     );
   }
@@ -106,10 +154,23 @@ export function ModularAudioPlayer({
           </div>
         </div>
 
+        {/* Time Display */}
+        <div className="text-right">
+          <div className="flex items-center space-x-1 text-white text-sm font-medium">
+            <Clock className="w-4 h-4" />
+            <span>{localTime}</span>
+          </div>
+          {stationLocalTime && stationLocalTime !== localTime && (
+            <div className="text-white/60 text-xs">
+              Station: {stationLocalTime}
+            </div>
+          )}
+        </div>
+
         {/* Settings Button */}
         <motion.button
           onClick={() => setShowSettings(!showSettings)}
-          className="text-white/60 hover:text-white transition-colors p-1 rounded"
+          className="text-white/60 hover:text-white transition-colors p-1 rounded ml-2"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
@@ -122,13 +183,24 @@ export function ModularAudioPlayer({
       
       {/* Main Controls */}
       <div className="flex items-center space-x-4">
+        {/* Previous Station */}
+        <motion.button
+          onClick={previousStation}
+          className="text-white hover:text-blue-300 transition-colors p-1"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          title="Previous Station"
+        >
+          <SkipBack className={compactMode ? "w-5 h-5" : "w-6 h-6"} />
+        </motion.button>
+
         {/* Play/Pause Button */}
         <motion.button
           onClick={
             audioState.isPlaying ? audioActions.pause : audioActions.play
           }
           disabled={audioState.isLoading}
-          className={`flex-shrink-0 ${compactMode ? "w-10 h-10" : "w-12 h-12"} bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 rounded-full flex items-center justify-center transition-all`}
+          className={`flex-shrink-0 ${compactMode ? "w-10 h-10" : "w-12 h-12"} bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 rounded-full flex items-center justify-center transition-all shadow-lg shadow-blue-500/30`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -145,6 +217,17 @@ export function ModularAudioPlayer({
               className={`${compactMode ? "w-4 h-4" : "w-5 h-5"} text-white ml-0.5`}
             />
           )}
+        </motion.button>
+
+        {/* Next Station */}
+        <motion.button
+          onClick={nextStation}
+          className="text-white hover:text-blue-300 transition-colors p-1"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          title="Next Station"
+        >
+          <SkipForward className={compactMode ? "w-5 h-5" : "w-6 h-6"} />
         </motion.button>
 
         {/* Volume Control */}
@@ -220,13 +303,26 @@ export function ModularAudioPlayer({
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
           >
-            <span className="flex-1">{audioState.error}</span>
-            <button
-              onClick={audioActions.clearError}
-              className="text-red-300 hover:text-red-100 ml-2"
-            >
-              ×
-            </button>
+            <div className="flex-1 flex flex-col">
+              <span className="font-medium">{audioState.error}</span>
+              {(audioState.error.includes("supported") || audioState.error.includes("network")) && (
+                <span className="text-xs opacity-75">Try another station or check connection</span>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+               <button
+                onClick={nextStation}
+                className="px-2 py-1 bg-red-500/30 hover:bg-red-500/50 rounded text-xs transition-colors"
+               >
+                 Next Station
+               </button>
+              <button
+                onClick={audioActions.clearError}
+                className="text-red-300 hover:text-red-100 ml-1 p-1"
+              >
+                ×
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

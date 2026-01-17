@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Globe } from "../components/Globe";
+import { CesiumGlobe } from "../components/CesiumGlobe";
 import { ModularAudioPlayer } from "../components/ModularAudioPlayer";
 import { StationPanel } from "../components/StationPanel";
 import { SearchPanel } from "../components/SearchPanel";
@@ -15,11 +15,25 @@ import { motion } from "framer-motion";
 import { Radio, Menu, X, List } from "lucide-react";
 
 export default function Home() {
-  const { selectedStation, addMarker } = useGlobeStore(); // Removed markers from destructuring
+  const { selectedStation, addMarker, selectStation } = useGlobeStore();
   const stationCount = useStationCount(); // Use new architecture station count
   const [isMobile, setIsMobile] = useState(false);
   const [showDirectory, setShowDirectory] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // Listen for station selection from 3D globe
+  useEffect(() => {
+    const handleStationSelected = (event: CustomEvent) => {
+      const station = event.detail;
+      if (station) {
+        console.log('Station selected from globe:', station);
+        selectStation(station);
+      }
+    };
+
+    window.addEventListener('stationSelected', handleStationSelected as EventListener);
+    return () => window.removeEventListener('stationSelected', handleStationSelected as EventListener);
+  }, [selectStation]);
 
   // Detect mobile device and screen size
   useEffect(() => {
@@ -34,9 +48,9 @@ export default function Home() {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-black">
-      {/* 3D Globe with Three.js */}
+      {/* 3D Globe with Cesium */}
       <div className="absolute inset-0">
-        <Globe />
+        <CesiumGlobe />
       </div>
 
       {/* Top Bar */}

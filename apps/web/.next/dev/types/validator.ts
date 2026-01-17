@@ -65,6 +65,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../../src/app/api/radio-browser/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/radio-browser">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/radio-browser/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../src/app/api/stations/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/stations">> = Specific

@@ -82,9 +82,25 @@ export class AudioService {
   private handleError() {
     this.setState("error");
     const errorMessage = this.getErrorMessage();
+    
+    // specialized retry for protocol issues (http vs https)
+    if (this.audio && this.audio.error && this.audio.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+       const currentSrc = this.audio.src;
+       // Check if it's an HTTP stream and we haven't tried HTTPS yet
+       if (currentSrc.startsWith('http://') && this.retryCount === 0) {
+           // Try upgrading to HTTPS first
+           console.log('Audio source not supported, trying HTTPS upgrade...');
+           const secureUrl = currentSrc.replace('http://', 'https://');
+           this.retryCount++;
+           this.audio.src = secureUrl;
+           this.audio.load();
+           return; // Don't report error yet
+       }
+    }
+
     this.listeners.error?.(errorMessage);
 
-    // Attempt retry if configured
+    // Attempt standard retry if configured
     if (this.retryCount < this.config.retryAttempts) {
       this.scheduleRetry();
     }
@@ -152,6 +168,23 @@ export class AudioService {
     delete this.listeners[event];
   }
 
+  private buildFallbackUrls(station: RadioStation): string[] {
+    const urls = [station.url];
+    
+    // Add HTTPS version if original is HTTP
+    if (station.url.startsWith('http://')) {
+      urls.push(station.url.replace('http://', 'https://'));
+    }
+    
+    // Add common streaming endpoint variations
+    if (station.url.includes(':8000')) {
+      urls.push(station.url.replace(':8000', ':80'));
+      urls.push(station.url.replace(':8000', ''));
+    }
+    
+    return urls;
+  }
+
   public async loadStation(
     station: RadioStation,
     streamUrl?: string,
@@ -162,6 +195,8 @@ export class AudioService {
     this.retryCount = 0;
 
     const url = streamUrl || station.url;
+    console.log('Loading station:', station.name, 'URL:', url);
+    
     if (this.audio.src !== url) {
       this.audio.src = url;
       this.audio.load();

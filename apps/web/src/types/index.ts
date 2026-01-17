@@ -102,6 +102,8 @@ export interface GlobeState {
   cameraPosition: [number, number, number];
   isAutoRotating: boolean;
   markers: StationMarker[];
+  playlist: RadioStation[];
+  playlistIndex: number;
 }
 
 export interface StationMarker {

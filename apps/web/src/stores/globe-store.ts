@@ -13,9 +13,18 @@ export interface CesiumCameraPosition {
   roll?: number;
 }
 
+// Target for fly-to animation
+export interface FlyToTarget {
+  latitude: number;
+  longitude: number;
+  height?: number;
+  duration?: number;
+}
+
 interface GlobeStore extends GlobeState {
   // Cesium-specific state
   cesiumCameraPosition?: CesiumCameraPosition;
+  flyToTarget?: FlyToTarget;
 
   // Actions
   selectStation: (station: RadioStation | null) => void;
@@ -29,6 +38,11 @@ interface GlobeStore extends GlobeState {
   updateMarkerVisibility: (stationId: string, isVisible: boolean) => void;
   getStationsByRegion: (region: string) => RadioStation[];
   searchStations: (query: string) => RadioStation[];
+  nextStation: () => void;
+  previousStation: () => void;
+  setPlaylist: (stations: RadioStation[]) => void;
+  flyToStation: (station: RadioStation) => void;
+  clearFlyToTarget: () => void;
 }
 
 export const useGlobeStore = create<GlobeStore>()(
@@ -39,16 +53,89 @@ export const useGlobeStore = create<GlobeStore>()(
     cameraPosition: [0, 0, 2.5],
     isAutoRotating: true,
     markers: [],
+    playlist: [],
+    playlistIndex: -1,
+    flyToTarget: undefined,
 
     // Actions
+    setPlaylist: (stations) => {
+      set({ playlist: stations });
+    },
+    
+    flyToStation: (station) => {
+      if (station.location?.lat && station.location?.lng) {
+        set({
+          flyToTarget: {
+            latitude: station.location.lat,
+            longitude: station.location.lng,
+            height: 2000000, // 2000km altitude for good view
+            duration: 2, // 2 second animation
+          },
+        });
+      }
+    },
+    
+    clearFlyToTarget: () => {
+      set({ flyToTarget: undefined });
+    },
+
     selectStation: (station) => {
+      const state = get();
+      // If manually clearing selection
+      if (!station) {
+        set({ selectedStation: null, playlistIndex: -1 });
+        return;
+      }
+
+      // If station is already in current playlist, just update index
+      const existingIndex = state.playlist.findIndex(s => s.id === station.id);
+      
+      let newPlaylist = state.playlist;
+      let newIndex = existingIndex;
+
+      // If station not in playlist, or playlist is empty, rebuild playlist from markers
+      if (existingIndex === -1 || state.playlist.length === 0) {
+        const visibleStations = state.markers
+          .filter(m => m.isVisible)
+          .map(m => m.station);
+        
+        // If the station itself isn't in visible markers (e.g. search result), add it
+        const stationInMarkers = visibleStations.find(s => s.id === station.id);
+         
+        newPlaylist = stationInMarkers 
+          ? visibleStations 
+          : [station, ...visibleStations];
+          
+        newIndex = newPlaylist.findIndex(s => s.id === station.id);
+      }
+
       set((state) => ({
         selectedStation: station,
+        playlist: newPlaylist,
+        playlistIndex: newIndex,
         markers: state.markers.map((marker) => ({
           ...marker,
-          isSelected: marker.station.id === station?.id,
+          isSelected: marker.station.id === station.id,
         })),
       }));
+    },
+
+    nextStation: () => {
+      const { playlist, playlistIndex } = get();
+      if (playlist.length === 0) return;
+      
+      const nextIndex = (playlistIndex + 1) % playlist.length;
+      const nextStation = playlist[nextIndex];
+      get().selectStation(nextStation);
+    },
+
+    previousStation: () => {
+      const { playlist, playlistIndex } = get();
+      if (playlist.length === 0) return;
+      
+      const prevIndex = (playlistIndex - 1 + playlist.length) % playlist.length;
+      const prevStation = playlist[prevIndex];
+      get().selectStation(prevStation);
     },
 
     hoverStation: (station) => {
@@ -85,6 +172,7 @@ export const useGlobeStore = create<GlobeStore>()(
       const position = latLngToPosition(
         station.location.lat,
         station.location.lng,
+        2.02,
       );
       const marker: StationMarker = {
         station,

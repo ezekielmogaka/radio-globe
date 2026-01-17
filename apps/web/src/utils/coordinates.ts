@@ -9,7 +9,7 @@
 export function latLngToPosition(
   lat: number,
   lng: number,
-  radius: number = 1,
+  radius: number = 2.02,
 ): [number, number, number] {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lng + 180) * (Math.PI / 180);

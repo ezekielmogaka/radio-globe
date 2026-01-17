@@ -70,14 +70,53 @@ export class RadioDiscoveryService {
 
   /**
    * Get ALL stations from server-side cache (JSON file)
+   * This method ensures we always try to load stations from the API if cache is empty
    */
   async getAllStations(): Promise<RadioStation[]> {
-    await this.cacheWarmupPromise;
+    try {
+      await this.cacheWarmupPromise;
+    } catch (warmupError) {
+      console.warn("Cache warmup failed, will try direct fetch:", warmupError);
+    }
+    
     const cached = this.cache.get("all");
-    if (cached) {
+    if (cached && cached.data.length > 0) {
+      console.log(`Returning ${cached.data.length} stations from cache`);
       return cached.data;
     }
+    
+    // If cache is empty or only has fallback data, try loading directly
+    console.log("Cache empty or invalid, attempting direct load...");
+    try {
+      const stations = await this.loadStationsDirectly();
+      if (stations.length > 0) {
+        this.setCache("all", stations, "api");
+        console.log(`Loaded ${stations.length} stations directly`);
+        return stations;
+      }
+    } catch (directError) {
+      console.warn("Direct station load failed:", directError);
+    }
+    
+    console.warn("All station loading methods failed, using fallback");
     return this.getFallbackStations();
+  }
+  
+  /**
+   * Load stations directly from API without enrichment (faster for initial load)
+   */
+  private async loadStationsDirectly(): Promise<RadioStation[]> {
+    const response = await fetch(resolveApiUrl("/api/stations"));
+    if (!response.ok) {
+      throw new Error(`Failed to fetch stations: ${response.status}`);
+    }
+    
+    const payload = await response.json();
+    const rawStations = payload.stations || [];
+    console.log(`Fetched ${rawStations.length} raw stations from API`);
+    
+    // Map stations without expensive enrichment for now
+    return this.mapRadioBrowserStations(rawStations);
   }
 
   /**
@@ -363,37 +402,86 @@ export class RadioDiscoveryService {
   private async hydrateFromServerCache(force = false): Promise<void> {
     if (this.hydrated && !force) return;
 
-    const [countries, regions] = await Promise.all([
-      loadNaturalEarthCountries(),
-      loadNaturalEarthRegions(),
-    ]);
-
+    console.log("[RadioDiscoveryService] Starting cache hydration...");
+    
     try {
+      // Fetch stations first - this is the critical path
       const response = await fetch(resolveApiUrl("/api/stations"));
       if (!response.ok) {
-        throw new Error("Failed to fetch stations from cache API");
+        throw new Error(`Failed to fetch stations from cache API: ${response.status}`);
       }
 
       const payload = await response.json();
-      const mappedStations = this.mapRadioBrowserStations(payload.stations || []);
-      const stations = await enrichStationsWithWof(mappedStations, countries, regions);
-      this.setCache("all", stations, payload.cached ? "file" : "api");
+      const rawStations = payload.stations || [];
+      console.log(`[RadioDiscoveryService] Received ${rawStations.length} raw stations from API`);
+      
+      // Map stations immediately - this is fast
+      const mappedStations = this.mapRadioBrowserStations(rawStations);
+      console.log(`[RadioDiscoveryService] Mapped ${mappedStations.length} stations`);
+      
+      // Cache the mapped stations FIRST before enrichment
+      // This ensures we have usable data even if enrichment fails
+      this.setCache("all", mappedStations, payload.cached ? "file" : "api");
       this.meta.set("all", {
-        total: stations.length,
+        total: mappedStations.length,
         version: payload.version ?? null,
         generatedAt: payload.timestamp ?? null,
       });
-
-      // Precompute indexes for quicker lookups
-      this.indexCountries(stations);
-      this.indexGenres(stations);
-      this.indexCities(stations);
-
+      
       this.hydrated = true;
+      console.log(`[RadioDiscoveryService] Cache hydrated with ${mappedStations.length} stations`);
+      
+      // Precompute indexes for quicker lookups (using non-enriched data)
+      this.indexCountries(mappedStations);
+      this.indexGenres(mappedStations);
+      this.indexCities(mappedStations);
+      
+      // Try enrichment in the background - don't block the main flow
+      this.enrichStationsInBackground(mappedStations);
     } catch (error) {
-      console.warn("Failed to hydrate cache:", error);
-      const fallback = await enrichStationsWithWof(this.getFallbackStations(), countries, regions);
-      this.setCache("all", fallback, "fallback");
+      console.error("[RadioDiscoveryService] Failed to hydrate cache:", error);
+      // Don't set fallback here - let getAllStations handle it
+      throw error;
+    }
+  }
+  
+  /**
+   * Enrich stations with WoF data in the background without blocking
+   */
+  private async enrichStationsInBackground(stations: RadioStation[]): Promise<void> {
+    try {
+      console.log(`[RadioDiscoveryService] Starting background enrichment for ${stations.length} stations...`);
+      
+      const [countries, regions] = await Promise.all([
+        loadNaturalEarthCountries(),
+        loadNaturalEarthRegions(),
+      ]);
+      
+      // Process in chunks to avoid blocking the main thread
+      const CHUNK_SIZE = 5000;
+      let enrichedStations: RadioStation[] = [];
+      
+      for (let i = 0; i < stations.length; i += CHUNK_SIZE) {
+        const chunk = stations.slice(i, i + CHUNK_SIZE);
+        const enrichedChunk = await enrichStationsWithWof(chunk, countries, regions);
+        enrichedStations = enrichedStations.concat(enrichedChunk);
+        
+        // Yield to the event loop periodically
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      
+      // Update cache with enriched data
+      this.setCache("all", enrichedStations, "file");
+      
+      // Rebuild indexes with enriched data
+      this.indexCountries(enrichedStations);
+      this.indexGenres(enrichedStations);
+      this.indexCities(enrichedStations);
+      
+      console.log(`[RadioDiscoveryService] Background enrichment complete: ${enrichedStations.length} stations`);
+    } catch (error) {
+      console.warn("[RadioDiscoveryService] Background enrichment failed:", error);
+      // Non-critical - we already have usable data
     }
   }
 

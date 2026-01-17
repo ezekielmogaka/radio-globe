@@ -108,6 +108,9 @@ export class CesiumEntityManager {
     // Store station data on the entity
     (entity as any).station = station;
     this.entities.set(station.id, entity);
+    
+    // Request render since we're using requestRenderMode
+    this.viewer.scene.requestRender();
 
     return entity;
   }
@@ -145,6 +148,9 @@ export class CesiumEntityManager {
       // Show label on hover or selection
       entity.label.show = new ConstantProperty(isHovered || isSelected);
     }
+    
+    // Request render for appearance updates
+    this.viewer.scene.requestRender();
   }
 
   /**
@@ -167,6 +173,7 @@ export class CesiumEntityManager {
   clearAll(): void {
     this.viewer.entities.removeAll();
     this.entities.clear();
+    this.viewer.scene.requestRender();
   }
 
   /**
@@ -177,6 +184,7 @@ export class CesiumEntityManager {
     if (entity) {
       this.viewer.entities.remove(entity);
       this.entities.delete(stationId);
+      this.viewer.scene.requestRender();
     }
   }
 }

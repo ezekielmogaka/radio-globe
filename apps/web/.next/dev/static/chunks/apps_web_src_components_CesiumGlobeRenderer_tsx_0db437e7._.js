@@ -1,0 +1,37 @@
+(globalThis.TURBOPACK || (globalThis.TURBOPACK = [])).push([typeof document === "object" ? document.currentScript : undefined,
+"[project]/apps/web/src/components/CesiumGlobeRenderer.tsx [app-client] (ecmascript, next/dynamic entry, async loader)", ((__turbopack_context__) => {
+
+__turbopack_context__.v((parentImport) => {
+    return Promise.all([
+  "static/chunks/node_modules_@cesium_engine_Source_Core_Matrix4_c34cc319.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Core_GeometryPipeline_b6f7ddb7.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Core_d677242a._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_DataSources_297ce30d._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Primitive_a847cd3b.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_GltfPipeline_57640cba._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Model_Model_4437d6ee.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Model_41d78a23._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_GltfLoader_2d1b04e5.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Expression_edabfdbb.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Cesium3DTile_f27e63a1.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Cesium3DTileset_d3f32877.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_GlobeSurfaceTileProvider_cb433231.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Camera_3234deee.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_ScreenSpaceCameraController_f6262adb.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_Scene_984bafd1.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Scene_4fa98008._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Renderer_2de1a290._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Shaders_f361b51b._.js",
+  "static/chunks/node_modules_@cesium_engine_Source_Widget_CesiumWidget_e86f3e72.js",
+  "static/chunks/00337_meshoptimizer_60027eb5._.js",
+  "static/chunks/node_modules_@spz-loader_core_dist_index_52975555.js",
+  "static/chunks/node_modules_@cesium_widgets_Source_d2c62022._.js",
+  "static/chunks/_d60a7d08._.js",
+  "static/chunks/apps_web_src_380e26d0._.js",
+  "static/chunks/apps_web_src_components_CesiumGlobeRenderer_tsx_e2fa3691._.js"
+].map((chunk) => __turbopack_context__.l(chunk))).then(() => {
+        return parentImport("[project]/apps/web/src/components/CesiumGlobeRenderer.tsx [app-client] (ecmascript, next/dynamic entry)");
+    });
+});
+}),
+]);

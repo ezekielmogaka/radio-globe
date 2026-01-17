@@ -6,6 +6,7 @@ import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import { MarkerData } from "../strategies/MarkerStrategy";
 import { createStationLoadingUseCase, createStationSelectionUseCase, createMarkerFactory } from "../infrastructure/ServiceContainer";
+import { useGlobeStore } from "../stores/globe-store";
 
 export function ClusteredStationMarkers() {
   const markersRef = useRef<THREE.Group>(null);
@@ -51,6 +52,16 @@ export function ClusteredStationMarkers() {
       try {
         const newMarkers = await stationLoadingUseCase.loadStationsForView(zoomLevel);
         setMarkers(newMarkers);
+
+        // Update global playlist with stations from current view
+        // Use requestAnimationFrame to avoid blocking the main thread during render
+        requestAnimationFrame(() => {
+          const visibleStations = newMarkers.flatMap(m => m.stations);
+          if (visibleStations.length > 0) {
+            useGlobeStore.getState().setPlaylist(visibleStations);
+          }
+        });
+
       } catch (error) {
         console.error('Failed to load markers:', error);
       } finally {
@@ -104,6 +115,10 @@ export function ClusteredStationMarkers() {
         const isHovered = hoveredMarkerId === data.id;
         const stationCount = data.stations.length;
         
+        // Radio Garden style - green glowing dots for cities
+        const markerColor = isHovered ? "#00ff88" : style.color || "#00d4aa";
+        const glowColor = "#00ffaa";
+        
         return (
           <group
             key={data.id}
@@ -119,89 +134,111 @@ export function ClusteredStationMarkers() {
               document.body.style.cursor = "auto";
             }}
           >
-            {/* Main marker */}
+            {/* Outer glow sphere */}
             <mesh>
-              <circleGeometry args={[style.size, 32]} />
+              <sphereGeometry args={[style.size * 1.5, 16, 16]} />
               <meshBasicMaterial
-                color={style.color}
+                color={glowColor}
                 transparent
-                opacity={style.opacity}
+                opacity={isHovered ? 0.4 : 0.15}
               />
             </mesh>
 
-            {/* Inner core */}
+            {/* Main marker - Radio Garden style glowing sphere */}
             <mesh>
-              <circleGeometry args={[style.size * 0.6, 16]} />
+              <sphereGeometry args={[style.size, 16, 16]} />
+              <meshBasicMaterial
+                color={markerColor}
+                transparent
+                opacity={isHovered ? 1 : style.opacity}
+              />
+            </mesh>
+
+            {/* Inner bright core */}
+            <mesh>
+              <sphereGeometry args={[style.size * 0.4, 12, 12]} />
               <meshBasicMaterial
                 color="#ffffff"
                 transparent
-                opacity={0.8}
+                opacity={isHovered ? 1 : 0.9}
               />
             </mesh>
 
-            {/* Station count for clusters */}
+            {/* Station count badge for clusters - positioned outward from globe center */}
             {stationCount > 1 && (
-              <>
-                <mesh position={[0, 0, 0.001]}>
-                  <circleGeometry args={[style.size * 0.35, 16]} />
+              <group position={[style.size * 1.2, style.size * 1.2, 0]}>
+                {/* Badge background */}
+                <mesh>
+                  <sphereGeometry args={[style.size * 0.5, 12, 12]} />
                   <meshBasicMaterial
-                    color={style.color}
+                    color="#1a1a2e"
                     transparent
-                    opacity={1}
+                    opacity={0.95}
                   />
                 </mesh>
 
+                {/* Station count text - billboard style */}
                 <Text
-                  position={[0, 0, 0.002]}
                   fontSize={style.size * 0.4}
-                  color="white"
+                  color="#00ffaa"
                   anchorX="center"
                   anchorY="middle"
+                  fontWeight="bold"
                 >
-                  {stationCount}
+                  {stationCount > 99 ? "99+" : stationCount}
                 </Text>
+              </group>
+            )}
+
+            {/* Pulsing glow effect for hovered markers */}
+            {isHovered && (
+              <>
+                <mesh>
+                  <sphereGeometry args={[style.size * 2.0, 16, 16]} />
+                  <meshBasicMaterial
+                    color={glowColor}
+                    transparent
+                    opacity={0.2}
+                  />
+                </mesh>
+                <mesh>
+                  <sphereGeometry args={[style.size * 2.5, 16, 16]} />
+                  <meshBasicMaterial
+                    color={glowColor}
+                    transparent
+                    opacity={0.1}
+                  />
+                </mesh>
               </>
             )}
 
-            {/* Glow effect */}
-            {style.glowEffect && (
-              <mesh>
-                <ringGeometry args={[style.size * 1.2, style.size * 1.5, 32]} />
-                <meshBasicMaterial
-                  color={style.color}
-                  transparent
-                  opacity={0.3}
-                  side={THREE.DoubleSide}
-                />
-              </mesh>
-            )}
-
-            {/* Hover ring */}
-            {isHovered && (
-              <mesh>
-                <ringGeometry args={[style.size * 1.1, style.size * 1.3, 32]} />
-                <meshBasicMaterial
-                  color={style.color}
-                  transparent
-                  opacity={0.5}
-                  side={THREE.DoubleSide}
-                />
-              </mesh>
-            )}
-
-            {/* Labels */}
+            {/* City/Location Label */}
             {style.hasLabel && style.labelText && (
-              <Text
-                position={[0, -style.size * 1.8, 0]}
-                fontSize={style.size * 0.3}
-                color="rgba(255, 255, 255, 0.9)"
-                anchorX="center"
-                anchorY="middle"
-                maxWidth={2}
-                textAlign="center"
-              >
-                {style.labelText}
-              </Text>
+              <group position={[0, -style.size * 2.2, 0]}>
+                {/* Label background */}
+                <mesh position={[0, 0, -0.001]}>
+                  <planeGeometry args={[style.labelText.length * style.size * 0.2 + style.size * 0.5, style.size * 0.6]} />
+                  <meshBasicMaterial
+                    color="#0a0a14"
+                    transparent
+                    opacity={0.85}
+                  />
+                </mesh>
+                
+                {/* Label text */}
+                <Text
+                  position={[0, 0, 0]}
+                  fontSize={style.size * 0.28}
+                  color="#ffffff"
+                  anchorX="center"
+                  anchorY="middle"
+                  maxWidth={2}
+                  textAlign="center"
+                  fontWeight="medium"
+                >
+                  {style.labelText}
+                </Text>
+              </group>
             )}
           </group>
         );
@@ -211,7 +248,7 @@ export function ClusteredStationMarkers() {
       {isLoading && (
         <mesh position={[0, 3, 0]}>
           <sphereGeometry args={[0.05, 16, 16]} />
-          <meshBasicMaterial color="#00d4ff" />
+          <meshBasicMaterial color="#00ffaa" />
         </mesh>
       )}
     </group>

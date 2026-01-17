@@ -13,6 +13,7 @@ interface CacheData {
 
 /**
  * GET /api/stations - Returns cached stations or fetches fresh data
+ * Uses proper cache headers for CDN/browser caching
  */
 export async function GET() {
   try {
@@ -24,11 +25,22 @@ export async function GET() {
       // Return cache if fresh
       if (age < CACHE_DURATION) {
         console.log(`Serving ${cacheData.stations.length} stations from cache (age: ${Math.round(age / 1000 / 60)} min)`);
+        
+        // Calculate cache control headers
+        const maxAge = Math.floor((CACHE_DURATION - age) / 1000); // seconds until stale
+        const staleWhileRevalidate = 86400; // 24 hours - serve stale while revalidating
+        
         return NextResponse.json({
           stations: cacheData.stations,
           cached: true,
           timestamp: cacheData.timestamp,
           count: cacheData.stations.length,
+        }, {
+          headers: {
+            'Cache-Control': `public, max-age=${maxAge}, stale-while-revalidate=${staleWhileRevalidate}`,
+            'X-Cache-Age': `${Math.round(age / 1000)}`,
+            'X-Cache-Status': 'HIT',
+          },
         });
       }
 
@@ -42,6 +54,12 @@ export async function GET() {
         stale: true,
         timestamp: cacheData.timestamp,
         count: cacheData.stations.length,
+      }, {
+        headers: {
+          'Cache-Control': 'public, max-age=0, stale-while-revalidate=86400',
+          'X-Cache-Age': `${Math.round(age / 1000)}`,
+          'X-Cache-Status': 'STALE',
+        },
       });
     }
 
@@ -54,6 +72,11 @@ export async function GET() {
       cached: false,
       timestamp: Date.now(),
       count: stations.length,
+    }, {
+      headers: {
+        'Cache-Control': `public, max-age=${CACHE_DURATION / 1000}, stale-while-revalidate=86400`,
+        'X-Cache-Status': 'MISS',
+      },
     });
   } catch (error) {
     console.error('Error in /api/stations:', error);

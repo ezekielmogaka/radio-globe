@@ -73,6 +73,7 @@ export interface IGlobeObservable {
   subscribe(observer: IGlobeObserver, eventTypes?: GlobeEventType[]): void;
   unsubscribe(observerId: string): void;
   notify(event: GlobeEvent): void;
+  getLatestEvent?(type: GlobeEventType): GlobeEvent | undefined;
 }
 
 /**
@@ -110,6 +111,16 @@ export class GlobeEventBus implements IGlobeObservable {
     if (this.observers.delete(observerId)) {
       console.log(`Observer ${observerId} unsubscribed`);
     }
+  }
+
+  getLatestEvent(type: GlobeEventType): GlobeEvent | undefined {
+    // Search history in reverse to find latest event of type
+    for (let i = this.eventHistory.length - 1; i >= 0; i--) {
+      if (this.eventHistory[i].type === type) {
+        return this.eventHistory[i];
+      }
+    }
+    return undefined;
   }
 
   /**

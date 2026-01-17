@@ -1,5 +1,7 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/proxy/audio/route": "app/api/proxy/audio/route.js",
+  "/api/radio-browser/route": "app/api/radio-browser/route.js",
   "/api/stations/route": "app/api/stations/route.js",
   "/page": "app/page.js"
 }

@@ -423,7 +423,7 @@ export class StationLoadingUseCase implements IStationLoadingUseCase {
         }
       }
       
-      const position = latLngToPosition(lat, lng, 1.01) as [number, number, number];
+      const position = latLngToPosition(lat, lng, 2.02) as [number, number, number];
       
       return {
         id: cityKey,

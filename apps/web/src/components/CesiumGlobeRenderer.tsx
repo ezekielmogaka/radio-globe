@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef, RefObject } from "react";
+import { useEffect, useRef, useCallback, RefObject } from "react";
 import {
   Ion,
   Viewer,
+  Cartesian3,
 } from "cesium";
 // import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { useGlobeStore } from "../stores/globe-store";
-import { StationLoadingUseCase } from "../usecases/StationUseCases";
-import { StationRepository } from "../repositories/StationRepository";
-import { GlobeEventBus } from "../events/GlobeEventBus";
+import { createStationLoadingUseCase } from "../infrastructure/ServiceContainer";
 import { radioDiscoveryService } from "../services/radioDiscoveryService";
 import { createCameraDestination } from "../utils/cesiumUtils";
 import { CesiumEntityManager } from "../utils/cesiumEntityManager";
@@ -26,14 +25,38 @@ if (typeof window !== "undefined") {
 
   // Add global error handler for Cesium imagery errors specifically
   window.addEventListener("unhandledrejection", (event) => {
-    if (
-      event.reason &&
-      (event.reason.toString().includes("ImageryLayer") ||
-        event.reason.toString().includes("cesium") ||
-        event.reason.toString().includes("imagery"))
-    ) {
-      console.warn("Cesium imagery error caught and handled:", event.reason);
+    const reason = event.reason;
+    if (reason) {
+      const errorStr = reason.toString ? reason.toString() : String(reason);
+      const message = reason.message || errorStr;
+      
+      // Suppress Cesium-related imagery/tile loading errors
+      if (
+        errorStr.includes("ImageryLayer") ||
+        errorStr.includes("cesium") ||
+        errorStr.includes("imagery") ||
+        errorStr.includes("tile") ||
+        errorStr.includes("Tile") ||
+        message.includes("ImageryLayer") ||
+        message.includes("Failed to load")
+      ) {
+        // Silently handle - these are usually transient network issues
+        event.preventDefault();
+        return;
+      }
+    }
+  });
+
+  // Also catch regular errors from Cesium
+  window.addEventListener("error", (event) => {
+    if (event.message && (
+      event.message.includes("cesium") ||
+      event.message.includes("Cesium") ||
+      event.message.includes("ImageryLayer") ||
+      event.message.includes("tile")
+    )) {
       event.preventDefault();
+      return;
     }
   });
 }
@@ -61,10 +84,12 @@ export default function CesiumGlobeRenderer({
     selectStation,
     hoverStation,
     addMarker,
+    flyToTarget,
+    clearFlyToTarget,
   } = useGlobeStore();
 
   // Load radio stations using the comprehensive country-based system
-  const loadStations = async () => {
+  const loadStations = useCallback(async () => {
     console.log("Loading stations with country-based organization...", {
       entityManager: !!entityManagerRef.current,
     });
@@ -75,9 +100,7 @@ export default function CesiumGlobeRenderer({
 
     try {
       // Create service instances
-      const repository = new StationRepository();
-      const eventBus = new GlobeEventBus();
-      const stationLoader = new StationLoadingUseCase(repository, eventBus);
+      const stationLoader = createStationLoadingUseCase();
 
       // Get current camera height and calculate proper zoom level
       const cameraHeight = viewerRef.current?.camera.positionCartographic.height || 15000000;
@@ -152,7 +175,7 @@ export default function CesiumGlobeRenderer({
           }
           
           // Create appropriate station data for the entity
-          if (marker.type === 'cluster') {
+          if (marker.type === 'cluster' || marker.type === 'city') {
             const stationData = {
               id: marker.id,
               name: marker.metadata.name || `Cluster ${marker.metadata.stationCount}`,
@@ -170,7 +193,7 @@ export default function CesiumGlobeRenderer({
               isCluster: true,
             };
             
-            console.log(`Creating cluster entity: ${stationData.name}`);
+            console.log(`Creating cluster entity: ${stationData.name} ${marker.type === 'city' ? '(City)' : '(Country)'}`);
             entityManagerRef.current!.createStationEntity(stationData as any);
             addMarker(stationData as any);
           } else {
@@ -257,7 +280,7 @@ export default function CesiumGlobeRenderer({
         console.error("Failed to add test station:", testError);
       }
     }
-  };
+  }, [addMarker]);
 
   // Initialize Cesium viewer and entity manager
   useEffect(() => {
@@ -267,101 +290,123 @@ export default function CesiumGlobeRenderer({
     });
     if (!containerRef.current || viewerRef.current) return;
 
-    try {
-      console.log("Creating Cesium viewer...");
+    let cancelled = false;
 
-      const viewer = createCesiumViewer(containerRef.current);
+    const initViewer = async () => {
+      try {
+        console.log("Creating Cesium viewer...");
 
-      viewerRef.current = viewer;
-      console.log("Cesium viewer created successfully");
+        const viewer = await createCesiumViewer(containerRef.current!);
 
-      // Add error event listeners but don't let them break the app
-      viewer.scene.renderError.addEventListener((scene, error) => {
-        console.warn("Cesium render error (handled):", error);
-      });
-
-      viewer.scene.debugShowFramesPerSecond = false;
-
-      // Create entity manager
-      console.log("Creating entity manager...");
-      entityManagerRef.current = new CesiumEntityManager(viewer);
-      console.log("Entity manager created");
-
-      overlayManagerRef.current = new CesiumRegionOverlayManager(viewer);
-
-      const resolveStation = (stationId: string | null): RadioStation | null => {
-        if (!stationId || !entityManagerRef.current) return null;
-        const entity = entityManagerRef.current.getEntity(stationId);
-        const station = entity ? ((entity as any).station as RadioStation | undefined) : undefined;
-        return station ?? null;
-      };
-
-      handlerRef.current = createEventHandlers(
-        viewer,
-        (stationId) => {
-          const station = resolveStation(stationId);
-          selectStation(station);
-        },
-        (stationId) => {
-          const station = resolveStation(stationId);
-          hoverStation(station);
-        },
-      );
-
-      // Add camera movement event listener for dynamic loading
-      let lastZoomLevel = 1;
-      viewer.camera.moveEnd.addEventListener(() => {
-        const height = viewer.camera.positionCartographic.height;
-        let newZoom = 1;
-        if (height < 2000000) newZoom = 5;
-        else if (height < 5000000) newZoom = 4;
-        else if (height < 10000000) newZoom = 3;
-        else if (height < 20000000) newZoom = 2;
-        else newZoom = 1;
-        
-        console.log(`Camera moved to height: ${height}, zoom level: ${newZoom}`);
-        
-        // Only reload if zoom level actually changed
-        if (newZoom !== lastZoomLevel) {
-          lastZoomLevel = newZoom;
-          setTimeout(() => {
-            loadStations();
-          }, 300);
+        if (cancelled) {
+          viewer.destroy();
+          return;
         }
-      });
 
-      // Load initial stations after a brief delay to ensure viewer is ready
-      console.log("Loading stations...");
-      setTimeout(() => {
-        loadStations();
-      }, 100);
+        viewerRef.current = viewer;
+        console.log("Cesium viewer created successfully");
 
-      // Hide loading screen after a delay
-      setTimeout(() => {
+        // Hide loading indicator
         const loadingEl = document.getElementById("cesium-loading");
         if (loadingEl) {
           loadingEl.style.display = "none";
-          console.log("Hiding loading screen");
         }
-      }, 1000);
-    } catch (error) {
-      console.error("Failed to initialize Cesium viewer:", error);
-      const err = error as Error;
-      console.error("Error details:", err.stack);
 
-      // Try to show fallback content
-      const loadingEl = document.getElementById("cesium-loading");
-      if (loadingEl) {
-        loadingEl.innerHTML = `
-          <div class="text-white text-center">
-            <div class="text-red-500 mb-2">Failed to initialize 3D Globe</div>
-            <div class="text-sm">Error: ${err.message}</div>
-          </div>
-        `;
+        // Add error event listeners but don't let them break the app
+        viewer.scene.renderError.addEventListener((scene, error) => {
+          console.warn("Cesium render error (handled):", error);
+        });
+
+        viewer.scene.debugShowFramesPerSecond = false;
+
+        // Create entity manager
+        console.log("Creating entity manager...");
+        entityManagerRef.current = new CesiumEntityManager(viewer);
+        console.log("Entity manager created");
+
+        overlayManagerRef.current = new CesiumRegionOverlayManager(viewer);
+
+        const resolveStation = (stationId: string | null): RadioStation | null => {
+          if (!stationId || !entityManagerRef.current) return null;
+          const entity = entityManagerRef.current.getEntity(stationId);
+          const station = entity ? ((entity as any).station as RadioStation | undefined) : undefined;
+          return station ?? null;
+        };
+
+        handlerRef.current = createEventHandlers(
+          viewer,
+          (stationId) => {
+            const station = resolveStation(stationId);
+            selectStation(station);
+          },
+          (stationId) => {
+            const station = resolveStation(stationId);
+            hoverStation(station);
+          },
+        );
+
+        // Add camera movement event listener for dynamic loading
+        let lastZoomLevel = 1;
+        viewer.camera.moveEnd.addEventListener(() => {
+          const height = viewer.camera.positionCartographic.height;
+          let newZoom = 1;
+          if (height < 2000000) newZoom = 5;
+          else if (height < 5000000) newZoom = 4;
+          else if (height < 10000000) newZoom = 3;
+          else if (height < 20000000) newZoom = 2;
+          else newZoom = 1;
+          
+          console.log(`Camera moved to height: ${height}, zoom level: ${newZoom}`);
+          
+          // Only reload if zoom level actually changed
+          if (newZoom !== lastZoomLevel) {
+            lastZoomLevel = newZoom;
+            setTimeout(() => {
+              loadStations();
+            }, 300);
+          }
+        });
+
+        // Load initial stations after a brief delay to ensure viewer is ready
+        console.log("Loading stations...");
+        setTimeout(() => {
+          loadStations();
+        }, 500);
+
+      } catch (error) {
+        console.error("Failed to initialize Cesium viewer:", error);
+        
+        let errorMessage = "Unknown error";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          console.error("Error details:", error.stack);
+        } else if (typeof error === "string") {
+          errorMessage = error;
+        } else {
+          try {
+            errorMessage = JSON.stringify(error);
+          } catch (e) {
+            errorMessage = String(error);
+          }
+        }
+
+        // Try to show fallback content
+        const loadingEl = document.getElementById("cesium-loading");
+        if (loadingEl) {
+          loadingEl.innerHTML = `
+            <div class="text-white text-center">
+              <div class="text-red-500 mb-2">Failed to initialize 3D Globe</div>
+              <div class="text-sm">Error: ${errorMessage}</div>
+            </div>
+          `;
+        }
       }
-    }
+    };
+
+    initViewer();
 
     return () => {
+      cancelled = true;
       cleanup();
     };
   }, [containerRef, selectStation, hoverStation, loadStations]);
@@ -399,6 +444,23 @@ export default function CesiumGlobeRenderer({
       duration: destination.duration,
     });
   }, [selectedStation]);
+
+  // Handle flyToTarget from store (for search/discovery)
+  useEffect(() => {
+    if (!viewerRef.current || !flyToTarget) return;
+
+    const viewer = viewerRef.current;
+    const { latitude, longitude, height = 2000000, duration = 2 } = flyToTarget;
+
+    viewer.camera.flyTo({
+      destination: Cartesian3.fromDegrees(longitude, latitude, height),
+      duration: duration,
+      complete: () => {
+        // Clear the target after animation completes
+        clearFlyToTarget();
+      },
+    });
+  }, [flyToTarget, clearFlyToTarget]);
 
   // Cleanup function
   const cleanup = () => {
