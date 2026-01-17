@@ -19,6 +19,51 @@ import {
 } from "../utils/cesiumUtils";
 import type { RadioStation } from "../types";
 
+// Generate a futuristic glowing dot texture
+function createGlowingDotCanvas(color: string, size: number, glow: boolean): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d');
+  if (!context) return canvas;
+
+  const center = size / 2;
+  const radius = size / 4;
+
+  // Clear
+  context.clearRect(0, 0, size, size);
+
+  // Outer glow
+  if (glow) {
+    const gradient = context.createRadialGradient(center, center, radius, center, center, size / 2);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.arc(center, center, size / 2, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  // Inner core
+  context.beginPath();
+  context.arc(center, center, radius, 0, Math.PI * 2);
+  context.fillStyle = '#ffffff';
+  context.fill();
+  
+  // Colored rim
+  context.beginPath();
+  context.arc(center, center, radius, 0, Math.PI * 2);
+  context.lineWidth = 2;
+  context.strokeStyle = color;
+  context.stroke();
+
+  return canvas;
+}
+
+const STATION_CANVAS = createGlowingDotCanvas('rgba(50, 255, 100, 0.8)', 64, true); // Neon Green
+const CLUSTER_CANVAS = createGlowingDotCanvas('rgba(50, 200, 255, 0.8)', 96, true); // Neon Blue
+const CITY_CANVAS = createGlowingDotCanvas('rgba(255, 100, 200, 0.8)', 80, true); // Neon Pink
+
 /**
  * Manages Cesium entities for radio stations
  */
@@ -36,35 +81,44 @@ export class CesiumEntityManager {
   createStationEntity(station: RadioStation): Entity {
     const stationEntity = radioStationToEntity(station);
 
-    // Choose icon based on whether it's a cluster or individual station
-    const iconImage = station.isCluster 
-      ? (station.stationCount && station.stationCount > 10 
-          ? "/cluster-large.svg" 
-          : "/cluster-small.svg")
-      : "/radio-station-icon.svg";
+    // Choose visual based on type
+    const isCluster = station.isCluster || (station as any).type === 'cluster';
+    const isCity = (station as any).type === 'city';
+    
+    let canvas = STATION_CANVAS;
+    let labelColor = Color.WHITE;
+    let scale = isCity ? 0.8 : 0.6;
+    let distanceFade = 3.0e6;
 
-    const distanceFadeLimit = station.isCluster ? 6.5e6 : 3.0e6;
+    if (isCity) {
+      canvas = CITY_CANVAS;
+      labelColor = Color.fromCssColorString('#ff64c8');
+      scale = 0.8;
+      distanceFade = 8.0e6;
+    } else if (isCluster) {
+      canvas = CLUSTER_CANVAS;
+      labelColor = Color.fromCssColorString('#32c8ff');
+      scale = 1.0;
+      distanceFade = 15.0e6;
+    }
+
     const entity = this.viewer.entities.add({
       id: station.id,
       position: stationEntity.position,
 
       billboard: new BillboardGraphics({
-        image: new ConstantProperty(iconImage),
+        image: new ConstantProperty(canvas),
         show: new ConstantProperty(true),
-        scale: new ConstantProperty(getStationScale(station)),
+        scale: new ConstantProperty(scale),
         color: new ConstantProperty(Color.WHITE),
         scaleByDistance: new ConstantProperty(
-          station.isCluster 
-            ? new NearFarScalar(8.0e5, 2.2, 2.0e7, 0.6)
-            : new NearFarScalar(6.0e5, 1.4, 1.5e7, 0.2)
+          new NearFarScalar(1.0e5, 1.5, 2.0e7, 0.2)
         ),
         translucencyByDistance: new ConstantProperty(
-          station.isCluster
-            ? new NearFarScalar(8.0e5, 1.0, 2.5e7, 0.1)
-            : new NearFarScalar(5.0e5, 1.0, 1.2e7, 0.05),
+          new NearFarScalar(1.0e5, 1.0, 3.0e7, 0.1)
         ),
         distanceDisplayCondition: new ConstantProperty(
-          new DistanceDisplayCondition(0.0, distanceFadeLimit),
+          new DistanceDisplayCondition(0.0, distanceFade),
         ),
         heightReference: new ConstantProperty(
           HeightReference.RELATIVE_TO_GROUND,
@@ -73,35 +127,25 @@ export class CesiumEntityManager {
           Number.POSITIVE_INFINITY,
         ),
       }),
+      
+      // Floating label for futuristic feel
+      point: undefined, // Disable point, use billboard
 
       label: new LabelGraphics({
-        text: new ConstantProperty(
-          station.isCluster 
-            ? `${station.name}`  // Simplified cluster text to reduce clutter
-            : station.name
-        ),
-        font: new ConstantProperty(
-          station.isCluster 
-            ? "bold 12pt sans-serif"  // Slightly smaller font
-            : "10pt sans-serif"       // Smaller font for individual stations
-        ),
-        style: new ConstantProperty(LabelStyle.FILL_AND_OUTLINE),
-        outlineWidth: new ConstantProperty(3), // Thicker outline for better readability
+        text: new ConstantProperty(station.name),
+        font: new ConstantProperty("14px 'Saira', sans-serif"), // Futuristic font
+        style: new ConstantProperty(LabelStyle.FILL),
         verticalOrigin: new ConstantProperty(VerticalOrigin.BOTTOM),
-        pixelOffset: new ConstantProperty(new Cartesian2(0, -40)), // Move labels higher to reduce overlap
-        show: new ConstantProperty(false), // Start hidden, show only on hover/selection
+        pixelOffset: new ConstantProperty(new Cartesian2(0, -20)),
+        show: new ConstantProperty(false), // Show on hover
         distanceDisplayCondition: new ConstantProperty(
-          new DistanceDisplayCondition(0.0, station.isCluster ? 5.0e6 : 1.8e6),
+          new DistanceDisplayCondition(0.0, distanceFade * 0.5), // Hide labels sooner than dots
         ),
-        fillColor: new ConstantProperty(
-          station.isCluster ? Color.YELLOW : Color.WHITE
-        ),
-        outlineColor: new ConstantProperty(Color.BLACK),
+        fillColor: new ConstantProperty(labelColor),
+        outlineWidth: new ConstantProperty(0),
         scaleByDistance: new ConstantProperty(
-          new NearFarScalar(8.0e5, 1.05, 1.2e7, 0.0),
-        ),
-        // Add collision detection to prevent overlapping labels
-        disableDepthTestDistance: new ConstantProperty(Number.POSITIVE_INFINITY),
+          new NearFarScalar(1.0e5, 1.2, 1.0e7, 0.5)
+        )
       }),
     });
 
@@ -127,26 +171,18 @@ export class CesiumEntityManager {
     if (!entity) return;
 
     const station = (entity as any).station as RadioStation;
-
+    
+    // Logic to make active selection glow or pulse could go here
     if (entity.billboard) {
-      // Update billboard color and scale
-      const color = getStationColor(station, isSelected, isHovered);
-      entity.billboard.color = new ConstantProperty(
-        Color.fromBytes(
-          Math.round(color.red * 255),
-          Math.round(color.green * 255),
-          Math.round(color.blue * 255),
-          Math.round(color.alpha * 255),
-        ),
-      );
-      const newScale =
-        getStationScale(station) * (isSelected ? 1.5 : isHovered ? 1.2 : 1.0);
-      entity.billboard.scale = new ConstantProperty(newScale);
-    }
-
-    if (entity.label) {
-      // Show label on hover or selection
-      entity.label.show = new ConstantProperty(isHovered || isSelected);
+      const baseScale = (station as any).type === 'city' ? 0.8 : ((station as any).isCluster ? 1.0 : 0.6);
+      const targetScale = isSelected ? baseScale * 1.5 : (isHovered ? baseScale * 1.3 : baseScale);
+      
+      entity.billboard.scale = new ConstantProperty(targetScale);
+      
+      // Update label visibility
+      if (entity.label) {
+        entity.label.show = new ConstantProperty(isHovered || isSelected);
+      }
     }
     
     // Request render for appearance updates

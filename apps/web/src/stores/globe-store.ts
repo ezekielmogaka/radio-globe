@@ -25,9 +25,11 @@ interface GlobeStore extends GlobeState {
   // Cesium-specific state
   cesiumCameraPosition?: CesiumCameraPosition;
   flyToTarget?: FlyToTarget;
+  selectedCluster: RadioStation[] | null;
 
   // Actions
   selectStation: (station: RadioStation | null) => void;
+  selectCluster: (stations: RadioStation[] | null) => void;
   hoverStation: (station: RadioStation | null) => void;
   setCameraPosition: (position: [number, number, number]) => void;
   setCesiumCameraPosition: (position: CesiumCameraPosition) => void;
@@ -49,6 +51,7 @@ export const useGlobeStore = create<GlobeStore>()(
   subscribeWithSelector((set, get) => ({
     // Initial state
     selectedStation: null,
+    selectedCluster: null,
     hoveredStation: null,
     cameraPosition: [0, 0, 2.5],
     isAutoRotating: true,
@@ -60,6 +63,24 @@ export const useGlobeStore = create<GlobeStore>()(
     // Actions
     setPlaylist: (stations) => {
       set({ playlist: stations });
+    },
+
+    selectStation: (station) => {
+      set({ selectedStation: station });
+      // Clear cluster selection when selecting a single station
+      if (station) {
+        set({ selectedCluster: null });
+      }
+    },
+
+    selectCluster: (stations) => {
+      set({ selectedCluster: stations });
+      // Optional: Clear selected station or keep it playing?
+      // Keeping it playing is better user experience ("Radio Garden" style)
+    },
+    
+    hoverStation: (station) => {
+      set({ hoveredStation: station });
     },
     
     flyToStation: (station) => {

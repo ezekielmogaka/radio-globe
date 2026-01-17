@@ -86,6 +86,7 @@ export default function CesiumGlobeRenderer({
     addMarker,
     flyToTarget,
     clearFlyToTarget,
+    selectCluster,
   } = useGlobeStore();
 
   // Load radio stations using the comprehensive country-based system
@@ -191,6 +192,8 @@ export default function CesiumGlobeRenderer({
               listeners: (marker.metadata.stationCount || 1) * 1000,
               stationCount: marker.metadata.stationCount,
               isCluster: true,
+              stations: marker.stations, // Store the list of stations
+              type: marker.type
             };
             
             console.log(`Creating cluster entity: ${stationData.name} ${marker.type === 'city' ? '(City)' : '(Country)'}`);
@@ -337,7 +340,18 @@ export default function CesiumGlobeRenderer({
           viewer,
           (stationId) => {
             const station = resolveStation(stationId);
-            selectStation(station);
+            const isCluster = station && ((station as any).isCluster || (station as any).type === 'cluster' || (station as any).type === 'city');
+            
+            if (isCluster && (station as any).stations) {
+              console.log("Cluster selected:", (station as any).stations.length, "stations");
+              selectCluster((station as any).stations);
+              // Also select the first station to play music immediately
+              if ((station as any).stations.length > 0) {
+                 selectStation((station as any).stations[0]);
+              }
+            } else {
+              selectStation(station);
+            }
           },
           (stationId) => {
             const station = resolveStation(stationId);

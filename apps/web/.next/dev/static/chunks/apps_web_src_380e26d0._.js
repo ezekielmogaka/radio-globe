@@ -521,6 +521,43 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$
 var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$utils$2f$cesiumUtils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/apps/web/src/utils/cesiumUtils.ts [app-client] (ecmascript)");
 ;
 ;
+// Generate a futuristic glowing dot texture
+function createGlowingDotCanvas(color, size, glow) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext('2d');
+    if (!context) return canvas;
+    const center = size / 2;
+    const radius = size / 4;
+    // Clear
+    context.clearRect(0, 0, size, size);
+    // Outer glow
+    if (glow) {
+        const gradient = context.createRadialGradient(center, center, radius, center, center, size / 2);
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        context.fillStyle = gradient;
+        context.beginPath();
+        context.arc(center, center, size / 2, 0, Math.PI * 2);
+        context.fill();
+    }
+    // Inner core
+    context.beginPath();
+    context.arc(center, center, radius, 0, Math.PI * 2);
+    context.fillStyle = '#ffffff';
+    context.fill();
+    // Colored rim
+    context.beginPath();
+    context.arc(center, center, radius, 0, Math.PI * 2);
+    context.lineWidth = 2;
+    context.strokeStyle = color;
+    context.stroke();
+    return canvas;
+}
+const STATION_CANVAS = createGlowingDotCanvas('rgba(50, 255, 100, 0.8)', 64, true); // Neon Green
+const CLUSTER_CANVAS = createGlowingDotCanvas('rgba(50, 200, 255, 0.8)', 96, true); // Neon Blue
+const CITY_CANVAS = createGlowingDotCanvas('rgba(255, 100, 200, 0.8)', 80, true); // Neon Pink
 class CesiumEntityManager {
     entities = new Map();
     viewer;
@@ -531,40 +568,51 @@ class CesiumEntityManager {
    * Create a radio station entity with cluster support
    */ createStationEntity(station) {
         const stationEntity = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$utils$2f$cesiumUtils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["radioStationToEntity"])(station);
-        // Choose icon based on whether it's a cluster or individual station
-        const iconImage = station.isCluster ? station.stationCount && station.stationCount > 10 ? "/cluster-large.svg" : "/cluster-small.svg" : "/radio-station-icon.svg";
-        const distanceFadeLimit = station.isCluster ? 6.5e6 : 3.0e6;
+        // Choose visual based on type
+        const isCluster = station.isCluster || station.type === 'cluster';
+        const isCity = station.type === 'city';
+        let canvas = STATION_CANVAS;
+        let labelColor = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].WHITE;
+        let scale = isCity ? 0.8 : 0.6;
+        let distanceFade = 3.0e6;
+        if (isCity) {
+            canvas = CITY_CANVAS;
+            labelColor = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].fromCssColorString('#ff64c8');
+            scale = 0.8;
+            distanceFade = 8.0e6;
+        } else if (isCluster) {
+            canvas = CLUSTER_CANVAS;
+            labelColor = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].fromCssColorString('#32c8ff');
+            scale = 1.0;
+            distanceFade = 15.0e6;
+        }
         const entity = this.viewer.entities.add({
             id: station.id,
             position: stationEntity.position,
             billboard: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$BillboardGraphics$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__BillboardGraphics$3e$__["BillboardGraphics"]({
-                image: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](iconImage),
+                image: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](canvas),
                 show: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](true),
-                scale: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"]((0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$utils$2f$cesiumUtils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getStationScale"])(station)),
+                scale: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](scale),
                 color: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].WHITE),
-                scaleByDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](station.isCluster ? new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](8.0e5, 2.2, 2.0e7, 0.6) : new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](6.0e5, 1.4, 1.5e7, 0.2)),
-                translucencyByDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](station.isCluster ? new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](8.0e5, 1.0, 2.5e7, 0.1) : new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](5.0e5, 1.0, 1.2e7, 0.05)),
-                distanceDisplayCondition: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$DistanceDisplayCondition$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__DistanceDisplayCondition$3e$__["DistanceDisplayCondition"](0.0, distanceFadeLimit)),
+                scaleByDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](1.0e5, 1.5, 2.0e7, 0.2)),
+                translucencyByDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](1.0e5, 1.0, 3.0e7, 0.1)),
+                distanceDisplayCondition: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$DistanceDisplayCondition$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__DistanceDisplayCondition$3e$__["DistanceDisplayCondition"](0.0, distanceFade)),
                 heightReference: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Scene$2f$HeightReference$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__HeightReference$3e$__["HeightReference"].RELATIVE_TO_GROUND),
                 disableDepthTestDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](Number.POSITIVE_INFINITY)
             }),
+            // Floating label for futuristic feel
+            point: undefined,
             label: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$LabelGraphics$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__LabelGraphics$3e$__["LabelGraphics"]({
-                text: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](station.isCluster ? `${station.name}` // Simplified cluster text to reduce clutter
-                 : station.name),
-                font: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](station.isCluster ? "bold 12pt sans-serif" // Slightly smaller font
-                 : "10pt sans-serif" // Smaller font for individual stations
-                ),
-                style: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Scene$2f$LabelStyle$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__LabelStyle$3e$__["LabelStyle"].FILL_AND_OUTLINE),
-                outlineWidth: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](3),
+                text: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](station.name),
+                font: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"]("14px 'Saira', sans-serif"),
+                style: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Scene$2f$LabelStyle$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__LabelStyle$3e$__["LabelStyle"].FILL),
                 verticalOrigin: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Scene$2f$VerticalOrigin$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__VerticalOrigin$3e$__["VerticalOrigin"].BOTTOM),
-                pixelOffset: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Cartesian2$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Cartesian2$3e$__["Cartesian2"](0, -40)),
+                pixelOffset: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Cartesian2$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Cartesian2$3e$__["Cartesian2"](0, -20)),
                 show: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](false),
-                distanceDisplayCondition: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$DistanceDisplayCondition$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__DistanceDisplayCondition$3e$__["DistanceDisplayCondition"](0.0, station.isCluster ? 5.0e6 : 1.8e6)),
-                fillColor: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](station.isCluster ? __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].YELLOW : __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].WHITE),
-                outlineColor: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].BLACK),
-                scaleByDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](8.0e5, 1.05, 1.2e7, 0.0)),
-                // Add collision detection to prevent overlapping labels
-                disableDepthTestDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](Number.POSITIVE_INFINITY)
+                distanceDisplayCondition: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$DistanceDisplayCondition$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__DistanceDisplayCondition$3e$__["DistanceDisplayCondition"](0.0, distanceFade * 0.5)),
+                fillColor: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](labelColor),
+                outlineWidth: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](0),
+                scaleByDistance: new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$NearFarScalar$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__NearFarScalar$3e$__["NearFarScalar"](1.0e5, 1.2, 1.0e7, 0.5))
             })
         });
         // Store station data on the entity
@@ -580,16 +628,15 @@ class CesiumEntityManager {
         const entity = this.entities.get(stationId);
         if (!entity) return;
         const station = entity.station;
+        // Logic to make active selection glow or pulse could go here
         if (entity.billboard) {
-            // Update billboard color and scale
-            const color = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$utils$2f$cesiumUtils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getStationColor"])(station, isSelected, isHovered);
-            entity.billboard.color = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$Core$2f$Color$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Color$3e$__["Color"].fromBytes(Math.round(color.red * 255), Math.round(color.green * 255), Math.round(color.blue * 255), Math.round(color.alpha * 255)));
-            const newScale = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$utils$2f$cesiumUtils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getStationScale"])(station) * (isSelected ? 1.5 : isHovered ? 1.2 : 1.0);
-            entity.billboard.scale = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](newScale);
-        }
-        if (entity.label) {
-            // Show label on hover or selection
-            entity.label.show = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](isHovered || isSelected);
+            const baseScale = station.type === 'city' ? 0.8 : station.isCluster ? 1.0 : 0.6;
+            const targetScale = isSelected ? baseScale * 1.5 : isHovered ? baseScale * 1.3 : baseScale;
+            entity.billboard.scale = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](targetScale);
+            // Update label visibility
+            if (entity.label) {
+                entity.label.show = new __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$cesium$2f$engine$2f$Source$2f$DataSources$2f$ConstantProperty$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ConstantProperty$3e$__["ConstantProperty"](isHovered || isSelected);
+            }
         }
         // Request render for appearance updates
         this.viewer.scene.requestRender();
@@ -1051,7 +1098,7 @@ function CesiumGlobeRenderer({ containerRef }) {
     const entityManagerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     const handlerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     const overlayManagerRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
-    const { selectedStation, hoveredStation, selectStation, hoverStation, addMarker, flyToTarget, clearFlyToTarget } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$stores$2f$globe$2d$store$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useGlobeStore"])();
+    const { selectedStation, hoveredStation, selectStation, hoverStation, addMarker, flyToTarget, clearFlyToTarget, selectCluster } = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$stores$2f$globe$2d$store$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useGlobeStore"])();
     // Load radio stations using the comprehensive country-based system
     const loadStations = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCallback"])({
         "CesiumGlobeRenderer.useCallback[loadStations]": async ()=>{
@@ -1144,7 +1191,9 @@ function CesiumGlobeRenderer({ containerRef }) {
                                     language: 'Multiple',
                                     listeners: (marker.metadata.stationCount || 1) * 1000,
                                     stationCount: marker.metadata.stationCount,
-                                    isCluster: true
+                                    isCluster: true,
+                                    stations: marker.stations,
+                                    type: marker.type
                                 };
                                 console.log(`Creating cluster entity: ${stationData.name} ${marker.type === 'city' ? '(City)' : '(Country)'}`);
                                 entityManagerRef.current.createStationEntity(stationData);
@@ -1294,7 +1343,17 @@ function CesiumGlobeRenderer({ containerRef }) {
                         handlerRef.current = (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$utils$2f$cesiumViewerConfig$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["createEventHandlers"])(viewer, {
                             "CesiumGlobeRenderer.useEffect.initViewer": (stationId)=>{
                                 const station = resolveStation(stationId);
-                                selectStation(station);
+                                const isCluster = station && (station.isCluster || station.type === 'cluster' || station.type === 'city');
+                                if (isCluster && station.stations) {
+                                    console.log("Cluster selected:", station.stations.length, "stations");
+                                    selectCluster(station.stations);
+                                    // Also select the first station to play music immediately
+                                    if (station.stations.length > 0) {
+                                        selectStation(station.stations[0]);
+                                    }
+                                } else {
+                                    selectStation(station);
+                                }
                             }
                         }["CesiumGlobeRenderer.useEffect.initViewer"], {
                             "CesiumGlobeRenderer.useEffect.initViewer": (stationId)=>{
@@ -1447,7 +1506,7 @@ function CesiumGlobeRenderer({ containerRef }) {
     };
     return null;
 }
-_s(CesiumGlobeRenderer, "toMS0WZTHt6dN8lj/MdHoJhUzVk=", false, function() {
+_s(CesiumGlobeRenderer, "qOhUxy9gkeWEkCDYDiI9sgKYvRE=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$src$2f$stores$2f$globe$2d$store$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useGlobeStore"]
     ];

@@ -7,6 +7,7 @@ import { StationPanel } from "../components/StationPanel";
 import { SearchPanel } from "../components/SearchPanel";
 import { StationDirectory } from "../components/StationDirectory";
 import { UserPanel } from "../components/UserPanel";
+import { ClusterStationList } from "../components/ClusterStationList";
 import { useGlobeStore } from "../stores/globe-store";
 import { useStationCount } from "../hooks/useStationCount";
 // import { globalRadioStations } from '../data/globalRadioStations'
@@ -148,7 +149,7 @@ export default function Home() {
           <StationPanel station={selectedStation} />
         </motion.div>
       )}
-
+      <ClusterStationList />
       {/* Bottom Controls */}
       <motion.div
         className="absolute bottom-0 left-0 right-0 z-40"
